@@ -54,10 +54,16 @@ const convertLink = () => {
   try {
     const parsedUrl = new URL(url);
 
-    if (!parsedUrl.hostname.endsWith("shopee.vn")) {
-      showMessage("Vui lòng nhập link Shopee Việt Nam nha.", "error");
-      return;
-    }
+    const allowedHosts = [
+  "shopee.vn",
+  "vn.shp.ee",
+  "s.shopee.vn",
+];
+
+if (!allowedHosts.includes(parsedUrl.hostname)) {
+  showMessage("Vui lòng nhập link Shopee Việt Nam nha.", "error");
+  return;
+}
 
     const cleanUrl = parsedUrl.origin + parsedUrl.pathname;
     const encodedUrl = encodeURIComponent(cleanUrl);
