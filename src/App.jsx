@@ -9,8 +9,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-const API_URL = "https://san-sale-2in-backed.vercel.app/api/convert";
-
+const AFFILIATE_ID = "17312880098";
 export default function App() {
   const [inputUrl, setInputUrl] = useState("");
   const [resultUrl, setResultUrl] = useState("");
@@ -39,53 +38,40 @@ export default function App() {
     }
   };
 
-  const convertLink = async () => {
-    const url = inputUrl.trim();
+  const AFFILIATE_ID = "17312880098";
 
-    setMessage("");
-    setResultUrl("");
+const convertLink = () => {
+  const url = inputUrl.trim();
 
-    if (!url) {
-      showMessage("Hãy dán link Shopee trước nha.", "error");
+  setMessage("");
+  setResultUrl("");
+
+  if (!url) {
+    showMessage("Hãy dán link Shopee trước nha.", "error");
+    return;
+  }
+
+  try {
+    const parsedUrl = new URL(url);
+
+    if (!parsedUrl.hostname.endsWith("shopee.vn")) {
+      showMessage("Vui lòng nhập link Shopee Việt Nam nha.", "error");
       return;
     }
 
-    setLoading(true);
+    const cleanUrl = parsedUrl.origin + parsedUrl.pathname;
+    const encodedUrl = encodeURIComponent(cleanUrl);
 
-    try {
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          url,
-        }),
-      });
+    const affiliateUrl =
+      `https://s.shopee.vn/an_redir?origin_link=${encodedUrl}&affiliate_id=${AFFILIATE_ID}`;
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.error || "Không thể chuyển đổi link.");
-      }
-
-      if (!data?.affiliateUrl) {
-        throw new Error("API không trả về link affiliate.");
-      }
-
-      setResultUrl(data.affiliateUrl);
-      showMessage("Chuyển đổi thành công 🎉", "success");
-    } catch (error) {
-      console.error(error);
-
-      showMessage(
-        error.message || "Không kết nối được server. Hãy kiểm tra backend.",
-        "error"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    setResultUrl(affiliateUrl);
+    showMessage("Chuyển đổi thành công 🎉", "success");
+  } catch (error) {
+    console.error(error);
+    showMessage("Link Shopee không hợp lệ nha.", "error");
+  }
+};
 
   const copyResult = async () => {
     if (!resultUrl) return;
