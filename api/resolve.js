@@ -1,4 +1,4 @@
-﻿export default async function handler(req, res) {
+export default async function handler(req, res) {
   const rawUrl = req.query.url;
 
   if (!rawUrl) {
@@ -8,53 +8,100 @@
   }
 
   try {
-    const input = new URL(rawUrl);
+    const inputUrl = new URL(rawUrl);
 
     const allowedHosts = [
       "vn.shp.ee",
       "s.shopee.vn",
       "shopee.vn",
+      "www.shopee.vn",
     ];
 
-    if (!allowedHosts.includes(input.hostname)) {
+    if (!allowedHosts.includes(inputUrl.hostname)) {
       return res.status(400).json({
-        error: "Link Shopee không hợp lệ",
+        error: "Link không thuộc Shopee Việt Nam",
       });
     }
 
-    let currentUrl = input.toString();
+    // ================================
+    // 1. LINK s.shopee.vn/an_redir
+    // ================================
+    if (
+      inputUrl.hostname === "s.shopee.vn" &&
+      inputUrl.pathname === "/an_redir"
+    ) {
+      const originLink = inputUrl.searchParams.get("origin_link");
 
-    for (let i = 0; i < 5; i++) {
-      const response = await fetch(currentUrl, {
-        method: "GET",
-        redirect: "manual",
-      });
-
-      const location = response.headers.get("location");
-
-      if (!location) {
-        break;
+      if (!originLink) {
+        return res.status(400).json({
+          error: "Link affiliate Shopee không có origin_link",
+        });
       }
 
-      currentUrl = new URL(location, currentUrl).toString();
+      const decodedOrigin = decodeURIComponent(originLink);
+
+      return res.status(200).json({
+        finalUrl: decodedOrigin,
+      });
     }
 
-    const finalUrl = new URL(currentUrl);
-
+    // ================================
+    // 2. LINK SHOPEE GỐC
+    // ================================
     if (
-      finalUrl.hostname !== "shopee.vn" &&
-      !finalUrl.hostname.endsWith(".shopee.vn")
+      inputUrl.hostname === "shopee.vn" ||
+      inputUrl.hostname === "www.shopee.vn"
     ) {
+      return res.status(200).json({
+        finalUrl: inputUrl.toString(),
+      });
+    }
+
+    // ================================
+    // 3. LINK VN.SHP.EE
+    // ================================
+    const response = await fetch(inputUrl.toString(), {
+      method: "GET",
+      redirect: "manual",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+      },
+    });
+
+    const location = response.headers.get("location");
+
+    if (location) {
+      const redirectUrl = new URL(location, inputUrl);
+
+      return res.status(200).json({
+        finalUrl: redirectUrl.toString(),
+      });
+    }
+
+    // Nếu Shopee không trả Location thì thử fetch theo redirect
+    const followResponse = await fetch(inputUrl.toString(), {
+      method: "GET",
+      redirect: "follow",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+      },
+    });
+
+    const finalUrl = followResponse.url;
+
+    if (!finalUrl) {
       return res.status(400).json({
-        error: "Không tìm thấy trang sản phẩm Shopee",
+        error: "Không tìm được link Shopee đích",
       });
     }
 
     return res.status(200).json({
-      finalUrl: finalUrl.toString(),
+      finalUrl,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Resolve error:", error);
 
     return res.status(500).json({
       error: "Không thể xử lý link Shopee",
