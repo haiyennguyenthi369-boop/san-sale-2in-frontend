@@ -38,16 +38,16 @@ export default function App() {
     }
   };
 
-  const AFFILIATE_ID = "17312880098";
-
-const convertLink = () => {
+const convertLink = async () => {
   const url = inputUrl.trim();
 
   setMessage("");
   setResultUrl("");
+  setLoading(true);
 
   if (!url) {
     showMessage("Hãy dán link Shopee trước nha.", "error");
+    setLoading(false);
     return;
   }
 
@@ -55,17 +55,47 @@ const convertLink = () => {
     const parsedUrl = new URL(url);
 
     const allowedHosts = [
-  "shopee.vn",
-  "vn.shp.ee",
-  "s.shopee.vn",
-];
+      "shopee.vn",
+      "vn.shp.ee",
+      "s.shopee.vn",
+    ];
 
-if (!allowedHosts.includes(parsedUrl.hostname)) {
-  showMessage("Vui lòng nhập link Shopee Việt Nam nha.", "error");
-  return;
-}
+    if (!allowedHosts.includes(parsedUrl.hostname)) {
+      showMessage("Vui lòng nhập link Shopee Việt Nam nha.", "error");
+      setLoading(false);
+      return;
+    }
 
-    const cleanUrl = parsedUrl.origin + parsedUrl.pathname;
+    let finalUrl = url;
+
+    // Link rút gọn → gọi API để lấy link sản phẩm gốc
+    if (
+      parsedUrl.hostname === "vn.shp.ee" ||
+      parsedUrl.hostname === "s.shopee.vn"
+    ) {
+      const response = await fetch(
+        `/api/resolve?url=${encodeURIComponent(url)}`
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        showMessage(
+          data?.error || "Không thể xử lý link Shopee.",
+          "error"
+        );
+        setLoading(false);
+        return;
+      }
+
+      finalUrl = data.finalUrl;
+    }
+
+    const finalParsedUrl = new URL(finalUrl);
+
+    const cleanUrl =
+      finalParsedUrl.origin + finalParsedUrl.pathname;
+
     const encodedUrl = encodeURIComponent(cleanUrl);
 
     const affiliateUrl =
@@ -73,9 +103,15 @@ if (!allowedHosts.includes(parsedUrl.hostname)) {
 
     setResultUrl(affiliateUrl);
     showMessage("Chuyển đổi thành công 🎉", "success");
+
   } catch (error) {
     console.error(error);
-    showMessage("Link Shopee không hợp lệ nha.", "error");
+    showMessage(
+      "Không thể xử lý link Shopee nha.",
+      "error"
+    );
+  } finally {
+    setLoading(false);
   }
 };
 
