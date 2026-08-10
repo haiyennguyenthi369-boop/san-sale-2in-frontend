@@ -153,9 +153,9 @@ height: "48px",
         <section className="card">
           <div className="intro">
             <h1>
-              Dán link sản phẩm để nhận
+              Dán link sản phẩm để áp
               <br />
-              voucher mạng xã hội
+              mã toàn sàn 💓
             </h1>
           </div>
 
